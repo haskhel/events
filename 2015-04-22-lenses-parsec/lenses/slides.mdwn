@@ -1,0 +1,405 @@
+% Introduction to Lenses
+% Joel Kaasinen
+% Helsinki Haskell User Group 2015-04-22
+
+# Lenses
+
+## The `lens` library
+
+- Hackage: <https://hackage.haskell.org/package/lens>
+- Source: <https://github.com/ekmett/lens>
+- Wiki: <https://github.com/ekmett/lens/wiki>
+
+## What are they?
+
+- _Functional references_ for getting or setting a value
+- Chainable using function composition `(.)`
+- A `Lens s t a b`: gets a field of type `a` in an `s` and sets it to a value
+  of type `b`, yielding a `t`
+    - Is like a pair of getter and setter `(s -> a, s -> b -> t)`
+    - Is like a function `(a -> b) -> s -> (t, a)`
+
+~~~~haskell
+ghci> import Control.Lens
+ghci> view _2 ("hello", "world")
+"world"
+ghci> set _2 True ("hello", "world")
+("hello",True)
+ghci> view (_1._2) (("hello","world"),"!")
+"world"
+ghci> set (_1._1) 5 (("hello","world"),"!")
+((5,"world"),"!")
+ghci> over _1 head ([1,2,3],4)
+(1,4)
+~~~~
+
+## Cool infix notation
+
+~~~~haskell
+ghci> import Control.Lens
+ghci> ("hello", "world") ^. _2
+"world"
+ghci> _2 .~ True $ ("hello", "world")
+("hello",True)
+ghci> (("hello","world"),"!") ^. _1 . _2
+"world"
+ghci> (("hello","world"),"!") & _1 . _1 .~ 5
+((5,"world"),"!")
+ghci> (1,(2,3)) & _2 . _1 *~ 10 & _1 +~ 100
+(101,(20,3))
+ghci> ([1,2,3],4) & _1 %~ head
+(1,4)
+~~~~
+
+## Define your own
+
+~~~~haskell
+import Control.Lens
+
+data Item a = Item {amount :: Int, location :: String, value :: a}
+  deriving Show
+
+_amount :: Lens (Item a) (Item a) Int Int
+_amount = lens get set
+   where get :: Item a -> Int
+         get (Item amount _ _) = amount
+         set :: Item a -> Int -> Item a
+         set (Item _ loc val) amount = Item amount loc val
+
+_location :: Lens (Item a) (Item a) String String
+_location = lens get set
+   where get (Item _ loc _) = loc
+         set (Item amount _ val) loc = Item amount loc val
+
+_value :: Lens (Item a) (Item b) a b
+_value = lens get set
+   where get (Item _ _ val) = val
+         set (Item amount loc _) val = Item amount loc val
+~~~~
+
+## ... and use them:
+
+~~~~haskell
+ghci> Item 1 "house" True ^. _amount
+1
+ghci> Item 1 "house" True & _value .~ []
+Item {amount = 1, location = "house", value = []}
+~~~~
+
+# Interlude: `Functor`
+
+## `Functor`
+
+Functors are things that can be `map`ped over
+
+~~~~haskell
+class Functor f where
+  fmap :: (a -> b) -> f a -> f b
+~~~~
+
+Here are a couple of common Functors:
+
+~~~~haskell
+instance Functor Maybe where
+  fmap f Nothing = Nothing
+  fmap f (Just x) = Just (f x)
+~~~~
+
+~~~~haskell
+instance Functor [] where
+  fmap f xs = map f xs
+~~~~
+
+and here are two boring ones:
+
+~~~~haskell
+data Identity a = Identity {runIdentity :: a}
+instance Functor Identity where
+  fmap f (Identity x) = Identity (f x)
+~~~~
+
+~~~~haskell
+newtype Const el a = Const {getConst :: el}
+instance Functor (Const el) where
+  fmap :: (a -> b) -> Const el a -> Const el b
+  fmap f (Const x) = Const x
+~~~~
+
+# What are Lenses?
+
+## Lens
+
+~~~~haskell
+type Lens s t a b = Functor f => (a -> f b) -> s -> f t
+~~~~
+
+The familiar `_1` is simple enough:
+
+~~~~haskell
+_1 :: Lens (a,x) (b,x) a b
+_1 op (a,x) = fmap (\b -> (b,x)) (op a)
+~~~~
+
+... as is the `lens` constructor:
+
+~~~~haskell
+lens :: (s -> a) -> (s -> b -> t) -> Lens s t a b
+lens getter setter f s = fmap (setter s) (f (getter s))
+~~~~
+
+For `set` we ignore the `Functor`:
+
+~~~~haskell
+set :: Lens s t a b -> b -> s -> t
+set l value container = runIdentity $ l (\_old -> Identity value) container
+~~~~
+
+## The `Const` trick
+
+Remember:
+
+~~~~haskell
+newtype Const el a = Const {getConst :: el}
+instance Functor (Const el) where
+  fmap :: (a -> b) -> Const el a -> Const el b
+  fmap f (Const x) = Const x
+~~~~
+
+Now:
+
+~~~~haskell
+getConst $ _1 Const ("r",True)
+  ==> "r"
+~~~~
+
+Thus:
+
+~~~~haskell
+view :: Lens s t a b -> s -> a
+view l value = getConst $ l Const value
+~~~~
+
+(actually, `view` has a more general type signature)
+
+## A few more combinators
+
+~~~~haskell
+choosing :: Lens s1 t1 a b -> Lens s2 t2 a b
+         -> Lens (Either s1 s2) (Either t1 t2) a b
+choosing lleft _      op (Left l)  = fmap Left $ lleft op l
+choosing _     lright op (Right r) = fmap Right $ lright op r
+
+example1, example2 :: Either (Int, Char) (Bool, Int)
+example1 = Left (1,'a')
+example2 = Right (True,2)
+~~~~
+
+~~~~haskell
+ghci> let
+> example1 ^. Main.choosing _1 _2
+1
+> example2 ^. Main.choosing _1 _2
+2
+~~~~
+
+~~~~haskell
+_all :: Eq a => a -> Lens [a] [a] a a
+_all ref = lens get set
+  where
+    get s     = ref
+    set s new = map (\old -> if old == ref then new else old) s
+~~~~
+
+~~~~haskell
+ghci> [1,0,2,0,3] & _all 0 .~ 7
+[1,7,2,7,3]
+~~~~
+
+## But why `Functor`?
+
+~~~~haskell
+type Lens s t a b = Functor f => (a -> f b) -> s -> f t
+~~~~
+
+- Why not?
+- It's a very common type class
+- It nicely abstracts both `Const` and `Identity`
+- It lets us do additional stuff like ... prompt the user!
+
+~~~~haskell
+askNew :: (Show a, Read a) => a -> IO a
+askNew old = do putStr ": old "
+                print old
+                putStrLn ": new?"
+                readLn
+~~~~
+
+~~~~haskell
+ghci> _2 askNew (1,"hi")
+: old "hi"
+: new?
+"asdf"
+(1,"asdf")
+~~~~
+
+# Traversal
+
+## Map-like functions
+
+~~~~haskell
+map :: (a -> b) -> [a] -> [b]
+fmap :: Functor f => (a -> b) -> f a -> f b
+Data.Text.map :: (Char -> Char) -> Text -> Text
+Data.Array.IArra.amap :: (IArray arr a, IArray arr b, Ix i) => (a -> b) -> arr i a -> arr i b
+(\f (x,y) -> (f x, f y)) :: (a -> b) -> (a,a) -> (b,b)
+~~~~
+
+These all have the same pattern:
+
+~~~~haskell
+type Mapping s t a b = (a -> b) -> (s -> t)
+
+map :: Mapping [a] [b] a b
+fmap :: Functor f => Mapping (f a) (f b) a b
+Data.Text.map :: Mapping Text Text Char Char
+Data.Array.IArra.amap :: (IArray arr a, IArray arr b, Ix i) => Mapping a b (arr i a) (arr i b)
+(\f (x,y) -> (f x, f y)) :: Mapping (a,a) (b,b) a b
+~~~~
+
+But can't be made Lenses: no get operation
+
+## Generalizing `Lens`
+
+Let's try to make a `Lens` that works over the whole list
+
+~~~~haskell
+wholeList :: Functor f => (a -> f b) -> [a] -> f [b]
+wholeList f [] = undefined -- how do I get something of type f [b] now?
+wholeList f (x:xs) = undefined -- how do I combine fx and rest?
+  where fx :: f b
+        fx = f x
+        rest :: f [b]
+        rest = wholeList f xs
+~~~~
+
+`Functor` is not enough, we need more power
+
+## I know, let's use a `Monad`!
+
+~~~~haskell
+wholeList :: Monad m => (a -> m b) -> [a] -> m [b]
+wholeList f [] = return []
+wholeList f (x:xs) = liftM2 (:) fx rest
+  where fx = f x
+        rest = wholeList f xs
+~~~~
+
+Note that we're not using `>>=` or `join` ....
+
+## `Applicative` is where it's at
+
+~~~~haskell
+class Applicative f where
+  pure :: a -> f a
+  (<*>) :: f (a -> b) -> f a -> f b
+
+wholeList :: Applicative f => (a -> f b) -> [a] -> f [b]
+wholeList f [] = pure []
+wholeList f (x:xs) = pure (:) <*> fx <*> rest
+  where fx = f x
+        rest = wholeList f xs
+~~~~
+
+However our old infrastructure doesn't work:
+
+~~~~haskell
+set :: (forall f. Functor f => (a -> f b) -> s -> f t) -> b -> s -> t
+set l value container = runIdentity $ l (\_old -> Identity value) container
+~~~~
+
+~~~haskell
+*Main> set wholeList 3 [True,True,True]
+...
+    Could not deduce (Applicative f) arising from a use of `wholeList'
+    from the context (Functor f)
+...
+~~~
+
+## Specialize to generalize
+
+Let's get rid of that pompous type signature for `set`:
+
+~~~~haskell
+set' :: ((a -> Identity b) -> s -> Identity t) -> b -> s -> t
+set' l value container = runIdentity $ l (\_old -> Identity value) container
+~~~~
+
+~~~~haskell
+ghci> set' wholeList 3 [True,True,True]
+[3,3,3]
+ghci> set' _1 3 (True,True)
+(3,True)
+~~~~
+
+This works because `Identity` is an `Applicative`.
+
+## Thus: `Traversal`
+
+~~~~haskell
+type Traversal s t a b = Applicative f => (a -> f b) -> s -> f t
+type Setter s t a b = ((a -> Identity b) -> s -> Identity t)
+
+over :: Setter s t a b -> (a -> b) -> s -> t
+over l f container = runIdentity $ l f' container
+  where f' = Identity . f
+
+set'' :: Setter s t a b -> b -> s -> t
+set'' = set'
+
+both :: Traversal (a,a) (b,b) a b
+both f (x,y) = pure (,) <*> f x <*> f y
+
+wholeText :: Traversal Data.Text.Text Data.Text.Text Char Char
+wholeText f t = fmap Data.Text.pack $ wholeList f string
+  where string = Data.Text.unpack t
+~~~~
+
+~~~~haskell
+ghci> set'' wholeText 'a' (Data.Text.pack "hello world")
+"aaaaaaaaaaa"
+ghci> over both (+1) (2,3)
+(3,4)
+~~~~
+
+## One more example
+
+The full power of `Applicative` is pretty nice:
+
+~~~~haskell
+ghci> wholeList askNew [1,2]
+: old 1
+: new?
+2
+: old 2
+: new?
+3
+[2,3]
+~~~~
+
+# Further topics
+
+## Further topics
+
+- Infix operators for monadic update: `.=`, `+=` etc.
+- Automated lens production with Template Haskell: `makeLenses ''YourType`
+- `Getter` – let's specialize `view` just like we specialized `set`
+- `Traversable` – a type class for sequential containers
+
+~~~~haskell
+traverse :: (Traversable t, Applicative f) => (a -> f b) -> t a -> f (t b)
+traverse :: Traversable t => Traversal (t a) (t b) a b
+~~~~
+
+- `Fold` – a lensy fold, related to `Foldable`
+- `Prism` – a lens for an optional field
+    - Think `Either`
