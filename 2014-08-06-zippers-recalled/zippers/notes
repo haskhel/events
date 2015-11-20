@@ -1,0 +1,78 @@
+* Background
+* Algebraic types
+
+inspiration: pattern matching
+
+** Haskell syntax vs. algebraic syntax
+
+"sum" and "product" types
+
+** Examples
+
+- enum
+- pair
+- struct
+- struct with multiple cases
+
+** Recursion
+
+- list
+- tree
+- expand recursive definitions to "inline" levels
+
+** Application: computing number of values
+
+data Color = Red | Green | Blue
+C = 1 + 1 + 1 = 3
+
+data Direction = Vertical | Horizontal
+D = 1 + 1 = 2
+
+data Visuals = Monochrome | Colorful Color | Gradient Color Color Direction
+V = 1 + C + C*C*D = 1 + 3 + 3*3*2 = 22
+
+* Zippers
+
+** First example: binary tree
+
+- "picking up" a node
+- paths and contexts
+
+    1              2               4
+   / \            /.\              .
+  2   3          4 . 5             .
+ / \ / \           1               2
+4  5 6  7   =>      \       =>     .\
+                     3             . 5
+                    / \            1
+                   6   7            \
+                                     3
+                                    / \
+                                   6   7
+
+
+*** basic operations
+
+  a = u              u
+ / \   \            / \
+b   c   d  =up=>   a   d
+                  / \
+                 b   c
+
+
+    a == u              b == a == u
+   / \    \            / \    \    \
+  b   e    g  =left=> c   d    e    g
+ / \
+c   d
+
+** Code
+
+** Differentiation
+
+- Formal derivatives
+- Derivatives of types!
+
+** Zippers as derivatives
+
+* Applicable to other languages as well?
