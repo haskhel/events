@@ -8,7 +8,8 @@ place: Futurice oy, Kamppi
 
 Talks:
 
-1. Lenses by Joel ([@opqdonut])
-2. Parsec by Oleg
+1. [Lenses by Joel](./lenses) by [@opqdonut][@opqdonut]
+2. [Parsec](./parsec) by [@phadej][@phadej]
 
 [@opqdonut]: https://github.com/opqdonut
+[@phadej]: https://github.com/phadej
