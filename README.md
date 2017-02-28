@@ -2,6 +2,8 @@
 
 Slides, recordings, ... from haskell-related events around Helsinki.
 
+- [2017-02-28 February17](./2017-02-28-gofore) @ Gofore
+- [2016-09-27 Papers we love](./2016-09-27-papers-we-love) @ Solita
 - [2016-04-28 @ Metosin](./2016-04-28-metosin)
 - [2015-11-19 November meetup](./2015-11-19-november-meetup) @ Exactum / Helsinki University
 - [2015-09-24 September meetup](./2015-09-24-september-meetup) @ Gofore
