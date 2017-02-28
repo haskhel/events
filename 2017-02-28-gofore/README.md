@@ -8,8 +8,9 @@ place: Gofore, Helsinki
 
 Talks:
 
-1. one weird trick for calculating ramanujan numbers by [@opqdonut]
+1. [one weird trick for calculating ramanujan numbers][ramanujan] by [@opqdonut]
 2. recursion-schemes by [@phadej]
 
 [@opqdonut]: https://github.com/opqdonut
+[ramanujan]: https://github.com/opqdonut/ramanujan
 [@phadej]: https://oleg.fi
