@@ -9,7 +9,7 @@ place: Gofore, Helsinki
 Talks:
 
 1. [one weird trick for calculating ramanujan numbers][ramanujan] by [@opqdonut]
-2. recursion-schemes by [@phadej]
+2. recursion-schemes ([pdf](./schemes.pdf), [lhs](./schemes.lhs)) by [@phadej]
 
 [@opqdonut]: https://github.com/opqdonut
 [ramanujan]: https://github.com/opqdonut/ramanujan
