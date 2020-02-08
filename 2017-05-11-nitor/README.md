@@ -1,6 +1,6 @@
 ---
 name: May 2017
-date: 2017-05-15
+date: 2017-05-11
 place: Nitor, Helsinki
 ---
 
