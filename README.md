@@ -4,7 +4,7 @@ Slides, recordings, ... from haskell-related events around Helsinki.
 
 - [2020-01-28 January20](./2020-01-28-nitor) @ Nitor
 - (a number of events missing between May17 and January2020)
-- [2017-05-15 May17](./2017-05-15-nitor) @ Nitor
+- [2017-05-11 May17](./2017-05-11-nitor) @ Nitor
 - [2017-02-28 February17](./2017-02-28-gofore) @ Gofore
 - [2016-09-27 Papers we love](./2016-09-27-papers-we-love) @ Solita
 - [2016-04-28 @ Metosin](./2016-04-28-metosin)
